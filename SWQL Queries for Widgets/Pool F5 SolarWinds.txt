@@ -1,0 +1,34 @@
+--Pool mail Exchange
+SELECT 
+    [F5Device].Caption AS [DeviceName], 
+    [F5Device].Node.Status AS [_DeviceStatusIcon],
+    ---Shorten Modules Name---
+    CASE IsNull ([F5Device].Modules.Name, 'Unknown')
+        WHEN 'Local Traffic Manager' THEN 'LTM'
+        WHEN 'Global Traffic Manager' THEN 'GTM'
+        WHEN 'Link Controller' THEN 'Link Controller'
+        WHEN 'Advanced Firewall Manager' THEN 'AFM'
+        WHEN 'Access Policy Manager' THEN 'APM'
+        WHEN 'Application Security Manger' THEN 'ASM'
+        WHEN 'Application Visibility and Reporting' THEN 'AV&R'
+        WHEN 'Policy Enforcement Manager' THEN 'PEM'
+        WHEN 'Application Security Manager' THEN 'ASM'
+        WHEN 'Policy Enforcement Manager' THEN 'PCM'
+        ELSE ' '
+    END AS [ModuleType], 
+    [F5Device].Pools.ShortName AS [PoolName],
+    ---Add Enable Yes/No---
+    CASE IsNull ([F5Device].Pools.Enabled, 7)
+        WHEN 1 THEN 'Yes'
+        WHEN 0 THEN 'No'
+        ELSE 'Unknown'
+    END AS [EnabledStatusDescription],
+    [F5Device].Pools.MemberCountTotal AS [TotalConnections],
+    [F5Device].Pools.MemberCountActual AS [ActualConnections],
+    [F5Device].Pools.MemberPercentActual AS [MemberPercent],
+    [F5Device].Pools.F5StatusReason AS [StatusDetails]
+FROM 
+    Orion.F5.System.DEVICE AS [F5Device]
+WHERE 
+    [F5Device].Modules.Name IN ('Local Traffic Manager', 'Global Traffic Manager')
+    AND [F5Device].Pools.ShortName LIKE '%mail%'
