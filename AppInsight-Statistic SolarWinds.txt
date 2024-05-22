@@ -1,0 +1,17 @@
+--Query Data AppInsight
+SELECT TOP 1000 [Application].Node.Caption AS [Node]
+      , [Application].Node.DetailsUrl AS [Node_Link]
+      , [Application].DisplayName AS [Application]
+      , [Application].DetailsUrl AS [Application_Link]
+      , [Application].Components.DisplayName AS [Component]
+      , [Application].Components.DetailsUrl AS [Component_Link]
+      , [Application].Components.ChartEvidence2.ObservationTimestamp
+      , [Application].Components.ChartEvidence2.AvgStatisticData AS [Metric]
+FROM Orion.APM.Application AS [Application]
+WHERE [Application].Template.Name = 'AppInsight for Active Directory'
+  -- The below is where you call pull out one of the specific metrics
+  AND [Application].Components.DisplayName = 'Attempted to logon using explicit credentials event'
+  AND [Application].Components.ChartEvidence2.ObservationTimestamp >= ADDDAY(-7, GETUTCDATE())
+  AND [Application].Components.ChartEvidence2.AvgStatisticData IS NOT NULL
+ORDER BY [Application].Node.Caption, [Application].[Name], [Application].Components.Name
+  , [Application].Components.ChartEvidence2.ObservationTimestamp DESC

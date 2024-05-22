@@ -1,0 +1,79 @@
+--Report Thresholds
+SELECT [TName].Thresholds.EntityType
+     , [Entity].DisplayName AS [Entity Name]
+     , CASE 
+          WHEN [Entity].StatusLED NOT LIKE '/%'
+               THEN ('/Orion/images/StatusIcons/Small-' + [Entity].StatusLED)
+          ELSE [Entity].StatusLED
+          END AS [StatusIcon]
+     , [Entity].DetailsUrl AS [Entity URL]
+     , [TName].DisplayName AS [Threshold Name]
+     , [TName].ThresholdOrder
+     , CASE 
+          WHEN [TName].Thresholds.ThresholdOperator = 0
+               THEN 'Greater than (>)'
+          WHEN [TName].Thresholds.ThresholdOperator = 1
+               THEN 'Greater than or equal to (>=)'
+          WHEN [TName].Thresholds.ThresholdOperator = 2
+               THEN 'Equal to (=)'
+          WHEN [TName].Thresholds.ThresholdOperator = 3
+               THEN 'Less than (<)'
+          WHEN [TName].Thresholds.ThresholdOperator = 4
+               THEN 'Less than or equal to (<=)'
+          WHEN [TName].Thresholds.ThresholdOperator = 5
+               THEN 'Not equal to (!=)'
+          END AS [Operator]
+     , CASE 
+          WHEN [TName].Thresholds.CurrentValue >= 0
+               THEN (TOSTRING(ROUND([TName].Thresholds.CurrentValue, 2)) + [TName].Unit)
+          ELSE 'N/A'
+          END AS [Current]
+     , CASE 
+          WHEN [TName].Thresholds.WarningEnabled = 'TRUE'
+               OR [TName].Thresholds.WarningEnabled IS NULL
+               THEN '/Orion/images/Check.Green.gif'
+          ELSE '/Orion/images/Check.None.gif'
+          END AS [WarningEnabledImage]
+     , CASE 
+          WHEN [TName].Thresholds.CriticalEnabled = 'TRUE'
+               OR [TName].Thresholds.WarningEnabled IS NULL
+               THEN '/Orion/images/Check.Green.gif'
+          ELSE '/Orion/images/Check.None.gif'
+          END AS [CriticalEnabledImage]
+     , CASE 
+          -- Single Poll
+          WHEN ISNULL([TName].Thresholds.WarningPolls, 1) = 1
+               AND ISNULL([TName].Thresholds.WarningPollsInterval, 1) = 1
+               THEN (TOSTRING([TName].Thresholds.Level1Value) + [TName].Unit + ' for a single poll')
+                    -- X of Y Polls
+          WHEN [TName].Thresholds.WarningPolls <> [TName].Thresholds.WarningPollsInterval
+               THEN (TOSTRING([TName].Thresholds.Level1Value) + [TName].Unit + ' for ' + TOSTRING([TName].Thresholds.WarningPolls) + ' out of the last ' + TOSTRING([TName].Thresholds.WarningPollsInterval) + ' polls')
+                    -- X consequitive polls
+          ELSE (TOSTRING([TName].Thresholds.Level1Value) + [TName].Unit + ' for ' + TOSTRING([TName].Thresholds.WarningPolls) + ' consecutive polls')
+          END AS WarningPolling
+     , CASE 
+          -- Single Poll
+          WHEN ISNULL([TName].Thresholds.CriticalPolls, 1) = 1
+               AND ISNULL([TName].Thresholds.CriticalPollsInterval, 1) = 1
+               THEN (TOSTRING([TName].Thresholds.Level2Value) + [TName].Unit + ' for a single poll')
+                    -- X of Y Polls
+          WHEN [TName].Thresholds.CriticalPolls <> [TName].Thresholds.CriticalPollsInterval
+               THEN (TOSTRING([TName].Thresholds.Level2Value) + [TName].Unit + ' for ' + TOSTRING([TName].Thresholds.CriticalPolls) + ' out of the last ' + TOSTRING([TName].Thresholds.CriticalPollsInterval) + ' polls')
+                    -- X consequitive polls
+          ELSE (TOSTRING([TName].Thresholds.Level2Value) + [TName].Unit + ' for ' + TOSTRING([TName].Thresholds.CriticalPolls) + ' consecutive polls')
+          END AS CriticalPolling
+     , CASE 
+          WHEN [TName].Thresholds.GlobalWarningValue <> [TName].Thresholds.Level1Value
+               OR [TName].Thresholds.GlobalCriticalValue <> [TName].Thresholds.Level2Value
+               THEN 'Custom Thresholds'
+          ELSE 'Global Thresholds'
+          END AS [Threshold Type]
+FROM Orion.ThresholdsNames AS [TName]
+INNER JOIN System.ManagedEntity AS [Entity]
+     ON [Entity].InstanceType = [TName].Thresholds.EntityType
+          AND [Entity].Uri LIKE ('%=' + TOSTRING([TName].Thresholds.InstanceID))
+INNER JOIN Orion.StatusInfo AS [Status]
+     ON [Entity].[Status] = [Status].StatusID
+WHERE [TName].Thresholds.InstanceID <> 0
+ORDER BY [TName].EntityType
+     , [TName].ThresholdOrder
